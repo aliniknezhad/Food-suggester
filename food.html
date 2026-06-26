@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>پیشنهاد غذای ایرانی</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 700px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 25px;
+        }
+        .ingredients-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 25px;
+        }
+        .ingredient-btn {
+            padding: 12px 8px;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 14px;
+            text-align: center;
+        }
+        .ingredient-btn:hover {
+            border-color: #667eea;
+            background: #f0f0ff;
+        }
+        .ingredient-btn.selected {
+            border-color: #667eea;
+            background: #667eea;
+            color: white;
+            font-weight: bold;
+        }
+        .suggest-btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 18px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-bottom: 20px;
+        }
+        .suggest-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+        .suggest-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .result {
+            display: none;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            border-radius: 15px;
+            padding: 25px;
+            margin-top: 15px;
+        }
+        .result.show { display: block; }
+        .result h2 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 22px;
+        }
+        .result .emoji { font-size: 40px; margin-bottom: 10px; }
+        .result p { color: #555; line-height: 1.8; margin-bottom: 8px; }
+        .result ul { margin: 10px 20px; color: #555; line-height: 2; }
+        .tag {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            margin: 2px;
+        }
+        .selected-count {
+            text-align: center;
+            color: #888;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🥘 پیشنهاد غذای ایرانی</h1>
+        <p class="subtitle">مواد غذایی که دارید رو انتخاب کنید</p>
+        <p class="selected-count" id="selectedCount">۰ ماده غذایی انتخاب شده</p>
+
+        <div class="ingredients-grid" id="ingredientsGrid"></div>
+
+        <button class="suggest-btn" id="suggestBtn" onclick="suggestFood()" disabled>
+            🍽️ پیشنهاد بده!
+        </button>
+
+        <div class="result" id="result"></div>
+    </div>
+
+    <script>
+        const ingredients = [
+            { id: 'rice', name: 'برنج', icon: '🍚' },
+            { id: 'chicken', name: 'مرغ', icon: '🍗' },
+            { id: 'meat', name: 'گوشت قرمز', icon: '🥩' },
+            { id: 'onion', name: 'پیاز', icon: '🧅' },
+            { id: 'tomato', name: 'گوجه', icon: '🍅' },
+            { id: 'potato', name: 'سیب زمینی', icon: '🥔' },
+            { id: 'egg', name: 'تخم مرغ', icon: '🥚' },
+            { id: 'lentil', name: 'عدس', icon: '🫘' },
+            { id: 'yogurt', name: 'ماست', icon: '🥛' },
+            { id: 'saffron', name: 'زعفران', icon: '🌸' },
+            { id: 'lemon', name: 'لیمو', icon: '🍋' },
+            { id: 'herbs', name: 'سبزیجات', icon: '🥬' },
+            { id: 'beans', name: 'لوبیا', icon: '🫛' },
+            { id: 'noodle', name: 'رشته', icon: '🍜' },
+            { id: 'eggplant', name: 'بادمجان', icon: '🍆' },
+            { id: 'pepper', name: 'فلفل دلمه', icon: '🫑' },
+            { id: 'garlic', name: 'سیر', icon: '🧄' },
+            { id: 'okra', name: 'بامیه', icon: '🫛' },
+        ];
+
+        const foods = [
+            {
+                name: 'زرشک پلو با مرغ',
+                emoji: '🍛',
+                needs: ['rice', 'chicken', 'saffron', 'onion'],
+                optional: ['yogurt', 'lemon'],
+                description: 'یکی از محبوب‌ترین غذاهای ایرانی! برنج زعفرانی با مرغ پخته شده و زرشک سرخ شده.',
+                time: '۹۰ دقیقه',
+                difficulty: 'متوسط'
+            },
+            {
+                name: 'قورمه سبزی',
+                emoji: '🍲',
+                needs: ['meat', 'herbs', 'beans', 'onion', 'lemon'],
+                optional: ['rice'],
+                description: 'خورشت ملی ایران با سبزیجات تازه، لوبیا قرمز و گوشت. همراه با برنج سرو می‌شود.',
+                time: '۱۲۰ دقیقه',
+                difficulty: 'سخت'
+            },
+            {
+                name: 'قیمه',
+                emoji: '🥘',
+                needs: ['meat', 'onion', 'potato', 'tomato'],
+                optional: ['lemon', 'saffron'],
+                description: 'خورشت لپه با گوشت و سیب زمینی سرخ شده. یک غذای خانگی محبوب.',
+                time: '۹۰ دقیقه',
+                difficulty: 'آسان'
+            },
+            {
+                name: 'جوجه کباب',
+                emoji: '🍢',
+                needs: ['chicken', 'onion', 'lemon', 'yogurt'],
+                optional: ['pepper', 'tomato'],
+                description: 'مرغ ماریناد شده با زعفران و لیمو، کباب شده روی آتش. با برنج یا نان سرو می‌شود.',
+                time: '۶۰ دقیقه',
+                difficulty: 'آسان'
+            },
+            {
+                name: 'کوکو سبزی',
+                emoji: '🥧',
+                needs: ['egg', 'herbs', 'onion'],
+                optional: ['garlic', 'tomato'],
+                description: 'املت ایرانی با سبزیجات تازه، گردو و زرشک. مناسب برای شام سبک.',
+                time: '۴۵ دقیقه',
+                difficulty: 'آسان'
+            },
+            {
+                name: 'عدس پلو',
+                emoji: '🍚',
+                needs: ['rice', 'lentil', 'onion'],
+                optional: ['potato', 'egg'],
+                description: 'برنج مخلوط با عدس و کشمش، همراه با کوکو یا گوشت سرو می‌شود.',
+                time: '۶۰ دقیقه',
+                difficulty: 'آسان'
+            },
+            {
+                name: 'باقلا پلو',
+                emoji: '🫛',
+                needs: ['rice', 'herbs', 'garlic'],
+                optional: ['meat', 'yogurt'],
+                description: 'برنج با باقلا و سبزیجات معطر. یک غذای بهاری خوشمزه.',
+                time: '۷۵ دقیقه',
+                difficulty: 'متوسط'
+            },
+            {
+                name: 'میرزا قاسمی',
+                emoji: '🍆',
+                needs: ['eggplant', 'egg', 'tomato', 'garlic'],
+                optional: ['onion', 'pepper'],
+                description: 'بادمجان کبابی با تخم مرغ و گوجه. غذای محلی شمال ایران.',
+                time: '۴۵ دقیقه',
+                difficulty: 'آسان'
+            },
+            {
+                name: 'آش رشته',
+                emoji: '🥣',
+                needs: ['noodle', 'herbs', 'beans', 'lentil', 'onion'],
+                optional: ['garlic', 'yogurt'],
+                description: 'آش سنتی ایرانی با رشته، حبوبات و سبزیجات. مناسب برای شب‌های سرد زمستان.',
+                time: '۱۲۰ دقیقه',
+                difficulty: 'متوسط'
+            },
+            {
+                name: 'کباب کوبیده',
+                emoji: '🥩',
+                needs: ['meat', 'onion', 'tomato'],
+                optional: ['pepper', 'saffron'],
+                description: 'کباب محبوب ایرانی با گوشت چرخ کرده و پیاز. با برنج یا نان سنگک سرو می‌شود.',
+                time: '۴۵ دقیقه',
+                difficulty: 'متوسط'
+            },
+            {
+                name: 'خورشت بامیه',
+                emoji: '🫛',
+                needs: ['okra', 'meat', 'tomato', 'onion'],
+                optional: ['garlic', 'lemon'],
+                description: 'خورشت بامیه با گوشت و گوجه. یک غذای جنوبی خوشمزه.',
+                time: '۹۰ دقیقه',
+                difficulty: 'متوسط'
+            },
+            {
+                name: 'نیمرو',
+                emoji: '🍳',
+                needs: ['egg', 'tomato'],
+                optional: ['onion', 'pepper'],
+                description: 'تخم مرغ سرخ شده با گوجه. ساده‌ترین و سریع‌ترین غذای ایرانی!',
+                time: '۱۵ دقیقه',
+                difficulty: 'خیلی آسان'
+            }
+        ];
+
+        const selected = new Set();
+
+        function renderIngredients() {
+            const grid = document.getElementById('ingredientsGrid');
+            grid.innerHTML = ingredients.map(ing => `
+                <div class="ingredient-btn" id="btn-${ing.id}" onclick="toggle('${ing.id}')">
+                    ${ing.icon} ${ing.name}
+                </div>
+            `).join('');
+        }
+
+        function toggle(id) {
+            if (selected.has(id)) {
+                selected.delete(id);
+                document.getElementById(`btn-${id}`).classList.remove('selected');
+            } else {
+                selected.add(id);
+                document.getElementById(`btn-${id}`).classList.add('selected');
+            }
+            const count = selected.size;
+            document.getElementById('selectedCount').textContent =
+                `${count} ماده غذایی انتخاب شده`;
+            document.getElementById('suggestBtn').disabled = count < 2;
+        }
+
+        function suggestFood() {
+            const result = document.getElementById('result');
+            let bestMatch = null;
+            let bestScore = -1;
+
+            foods.forEach(food => {
+                const hasNeeds = food.needs.filter(n => selected.has(n));
+                const hasOptional = food.optional.filter(o => selected.has(o));
+                const needRatio = hasNeeds.length / food.needs.length;
+                const score = (needRatio * 10) + (hasOptional.length * 1);
+
+                if (needRatio >= 0.5 && score > bestScore) {
+                    bestScore = score;
+                    bestMatch = { ...food, hasNeeds, hasOptional };
+                }
+            });
+
+            if (!bestMatch) {
+                result.innerHTML = `
+                    <div class="emoji">🤷‍♂️</div>
+                    <h2>غذایی پیدا نشد!</h2>
+                    <p>مواد بیشتری انتخاب کنید تا بتوانم پیشنهاد بدهم.</p>
+                `;
+            } else {
+                const missing = bestMatch.needs.filter(n => !selected.has(n));
+                result.innerHTML = `
+                    <div class="emoji">${bestMatch.emoji}</div>
+                    <h2>${bestMatch.name}</h2>
+                    <p>${bestMatch.description}</p>
+                    <p>⏱️ زمان پخت: ${bestMatch.time}</p>
+                    <p>📊 سختی: ${bestMatch.difficulty}</p>
+                    ${missing.length > 0 ? `<p>⚠️ مواد لازم اضافی: ${missing.map(m => ingredients.find(i => i.id === m)?.name).join('، ')}</p>` : ''}
+                    <p style="margin-top:10px">✅ مواد موجود: ${bestMatch.hasNeeds.map(m => ingredients.find(i => i.id === m)?.name).join('، ')}</p>
+                `;
+            }
+            result.classList.add('show');
+        }
+
+        renderIngredients();
+    </script>
+</body>
+</html>
